@@ -29,6 +29,7 @@ from a2plib import (
     DebugMsg,
     A2P_DEBUG_LEVEL,
     A2P_DEBUG_1,
+    A2P_DEBUG_2,
     PARTIAL_SOLVE_STAGE1,
     )
 from a2p_dependencies import Dependency
@@ -54,6 +55,8 @@ SOLVER_SPIN_ACCURACY = 1.0e-1 # gets to smaller values during solving
 SOLVER_STEPS_CONVERGENCY_CHECK = 150 #200
 SOLVER_CONVERGENCY_FACTOR = 0.99
 SOLVER_CONVERGENCY_ERROR_INIT_VALUE = 1.0e+20
+
+SOLVER_ONESTEP = 0 # for debug purposes - 0:normal  1:one step in each worklist  2:one step in first worklist
 
 #------------------------------------------------------------------------------
 class SolverSystem():
@@ -96,16 +99,19 @@ class SolverSystem():
             # do less accurate solving for simulations...
             solverControlData = {
                 #Index:(posAccuracy,spinAccuracy,completeSolvingRequired)
-                1:(0.1,0.1,True)
+                1:(0.5,0.5,True),
+                2:(0.1,0.1,False)
                 }
         else:
             solverControlData = {
                 #Index:(posAccuracy,spinAccuracy,completeSolvingRequired)
-                1:(0.1,0.1,True),
-                2:(0.01,0.01,True),
-                3:(0.001,0.001,False),
-                4:(0.0001,0.0001,False),
-                5:(0.00001,0.00001,False)
+                1:(0.1    , 0.1     , True),
+                2:(0.033  , 0.033   , True),
+                3:(0.01   , 0.01    , True),
+                4:(0.0033 , 0.0033  , False),
+                5:(0.001  , 0.001   , False),
+                6:(0.0001 , 0.0001  , False),
+                7:(0.00001, 0.00001 , False)
                 }
         return solverControlData
             
@@ -170,18 +176,17 @@ class SolverSystem():
         for c in self.constraints:
             rigid1 = self.getRigid(c.Object1)
             rigid2 = self.getRigid(c.Object2)
-            
+
             #create and update list of constrained rigids
             if rigid2 != None and not rigid2 in rigid1.linkedRigids: rigid1.linkedRigids.append(rigid2);
             if rigid1 != None and not rigid1 in rigid2.linkedRigids: rigid2.linkedRigids.append(rigid1);
-            
+
             try:
                 Dependency.Create(doc, c, self, rigid1, rigid2)
             except:
                 self.status = "loadingDependencyError"
                 deleteList.append(c)
-                
-                
+
         for rig in self.rigids:
             rig.hierarchyLinkedRigids.extend(rig.linkedRigids)
                
@@ -211,7 +216,7 @@ class SolverSystem():
             
         self.retrieveDOFInfo() #function only once used here at this place in whole program
         self.status = "loaded"
-        
+
     def DOF_info_to_console(self):
         doc = FreeCAD.activeDocument()
 
@@ -430,11 +435,16 @@ class SolverSystem():
         if self.status == "loadingDependencyError":
             return
         self.assignParentship(doc)
+
         while True:
             systemSolved = self.calculateChain(doc)
             if self.level_of_accuracy == 1:
                 self.detectUnmovedParts()   # do only once here. It can fail at higher accuracy levels
                                             # where not a final solution is required.
+            if SOLVER_ONESTEP>0:
+                systemSolved = True
+                break
+
             if systemSolved:
                 self.level_of_accuracy+=1
                 if self.level_of_accuracy > len(self.getSolverControlData()):
@@ -567,6 +577,9 @@ to a fixed part!
                 else:
                     break
 
+                if (SOLVER_ONESTEP > 1):
+                    break
+
             return True
 
     def calculateWorkList(self, doc, workList):
@@ -584,7 +597,11 @@ to a fixed part!
 
         calcCount = 0
         goodAccuracy = False
+        dbgLvl = a2plib.A2P_DEBUG_LEVEL  # it may temporarly change inside while
         while not goodAccuracy:
+            if (a2plib.A2P_DEBUG_LEVEL >= a2plib.A2P_DEBUG_2) and (self.convergencyCounter == SOLVER_STEPS_CONVERGENCY_CHECK):
+                a2plib.A2P_DEBUG_LEVEL = a2plib.A2P_DEBUG_LEVEL + 1
+
             maxPosError = 0.0
             maxAxisError = 0.0
             maxSingleAxisError = 0.0
@@ -612,13 +629,15 @@ to a fixed part!
                 maxAxisError <= reqSpinAccuracy and # relevant check
                 maxSingleAxisError <= reqSpinAccuracy * 10  # additional check for insolvable assemblies
                                                             # sometimes spin can be solved but singleAxis not..
-                ):
+                ) or (SOLVER_ONESTEP>0):
                 # The accuracy is good, we're done here
                 goodAccuracy = True
                 # Mark the rigids as tempfixed and add its constrained rigids to pending list to be processed next
                 for r in workList:
                     r.applySolution(doc, self)
                     r.tempfixed = True
+
+            a2plib.A2P_DEBUG_LEVEL = dbgLvl 
 
             if self.convergencyCounter > SOLVER_STEPS_CONVERGENCY_CHECK:
                 if (
@@ -656,6 +675,7 @@ to a fixed part!
             if self.stepCount > SOLVER_MAXSTEPS:
                 Msg( "Reached max calculations count ({})\n".format(SOLVER_MAXSTEPS) )
                 return False
+
         return True
 
     def solutionToParts(self,doc):

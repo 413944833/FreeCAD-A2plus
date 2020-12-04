@@ -75,6 +75,7 @@ A2P_DEBUG_NONE      = 0
 A2P_DEBUG_1         = 1
 A2P_DEBUG_2         = 2
 A2P_DEBUG_3         = 3
+A2P_DEBUG_4         = 4
 
 A2P_DEBUG_LEVEL = A2P_DEBUG_NONE
 
@@ -496,9 +497,11 @@ def Msg(tx):
     FreeCAD.Console.PrintMessage(tx)
 
 #------------------------------------------------------------------------------
-def DebugMsg(level, tx):
-    if A2P_DEBUG_LEVEL >= level:
-        FreeCAD.Console.PrintMessage(tx)
+def DebugMsg(level, *argv, end='\n'):
+    if A2P_DEBUG_LEVEL < level: return
+    for arg in argv:
+        print (arg, end=' ')
+    print(end, end='')
 
 #------------------------------------------------------------------------------
 def drawSphere(center, color):
