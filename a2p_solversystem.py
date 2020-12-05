@@ -105,13 +105,14 @@ class SolverSystem():
         else:
             solverControlData = {
                 #Index:(posAccuracy,spinAccuracy,completeSolvingRequired)
-                1:(0.1    , 0.1     , True),
-                2:(0.033  , 0.033   , True),
-                3:(0.01   , 0.01    , True),
-                4:(0.0033 , 0.0033  , False),
-                5:(0.001  , 0.001   , False),
-                6:(0.0001 , 0.0001  , False),
-                7:(0.00001, 0.00001 , False)
+                1:(100.0  , 30.0    , True),
+                2:(10.0   , 3.0     , True),
+                3:(1.0    , 0.3     , True),
+                4:(0.1    , 0.1     , True),
+                5:(0.01   , 0.03    , True),
+                6:(0.001  , 0.01    , False),
+                7:(0.0001 , 0.003   , False),
+                8:(0.00001, 0.001   , False)
                 }
         return solverControlData
             

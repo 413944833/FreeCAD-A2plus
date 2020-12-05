@@ -98,7 +98,6 @@ class Rigid():
         self.maxAxisError = 0.0         # This is an avaverage of all single spins
         self.maxSingleAxisError = 0.0   # Also the max single Axis spin has to be checked for solvability       
         self.refPointsBoundBoxSize = 0.0
-        self.countSpinVectors = 0
         self.currentDOFCount = 6
         self.superRigid = None  #if not None, it means that when action performed to this rigid,
                                 #actually the action must be done on the superRigid
@@ -262,6 +261,12 @@ class Rigid():
                 if dep.refPoint.y > ymax: ymax=dep.refPoint.y
                 if dep.refPoint.z < zmin: zmin=dep.refPoint.z
                 if dep.refPoint.z > zmax: zmax=dep.refPoint.z
+        xmin = xmin - 5.0
+        ymin = ymin - 5.0
+        zmin = zmin - 5.0
+        xmax = xmax + 5.0
+        ymax = ymax + 5.0
+        zmax = zmax + 5.0
         self.bboxMin = Base.Vector(xmin,ymin,zmin)
         self.bboxMax = Base.Vector(xmax,ymax,zmax)
         self.refPointsBoundBoxSize = self.bboxMax.sub(self.bboxMin).Length
@@ -285,6 +290,12 @@ class Rigid():
                 if dep.refPoint.y > ymax: ymax=dep.refPoint.y
                 if dep.refPoint.z < zmin: zmin=dep.refPoint.z
                 if dep.refPoint.z > zmax: zmax=dep.refPoint.z
+        xmin = xmin - 5.0
+        ymin = ymin - 5.0
+        zmin = zmin - 5.0
+        xmax = xmax + 5.0
+        ymax = ymax + 5.0
+        zmax = zmax + 5.0
         self.refPointsBoundBoxSize = math.sqrt( (xmax-xmin)**2 + (ymax-ymin)**2 + (zmax-zmin)**2 )
         self.bboxMin = Base.Vector(xmin,ymin,zmin)
         self.bboxMax = Base.Vector(xmax,ymax,zmax)
@@ -303,6 +314,12 @@ class Rigid():
             if dep.refPoint.y > ymax: ymax=dep.refPoint.y
             if dep.refPoint.z < zmin: zmin=dep.refPoint.z
             if dep.refPoint.z > zmax: zmax=dep.refPoint.z
+        xmin = xmin - 5.0
+        ymin = ymin - 5.0
+        zmin = zmin - 5.0
+        xmax = xmax + 5.0
+        ymax = ymax + 5.0
+        zmax = zmax + 5.0
         self.refPointsBoundBoxSize = math.sqrt( (xmax-xmin)**2 + (ymax-ymin)**2 + (zmax-zmin)**2 )
         self.bboxMin = Base.Vector(xmin,ymin,zmin)
         self.bboxMax = Base.Vector(xmax,ymax,zmax)
@@ -319,7 +336,6 @@ class Rigid():
         self.maxPosError = 0.0
         self.maxAxisError = 0.0         # SpinError is an average of all single spins
         self.maxSingleAxisError = 0.0   # avoid average, to detect unsolvable assemblies
-        self.countSpinVectors = 0
         self.moveVectorSum = Base.Vector(0,0,0)
         self.spin = None
 
@@ -385,7 +401,6 @@ class Rigid():
                     axis.multiply(beta*vec1.Length) #here use degrees
                     spinLenSum = spinLenSum + vec1.Length;
                     self.spin = self.spin.add(axis)
-                    self.countSpinVectors += 1
  
                     DebugMsg(4,"R   ",self.label, "  beta=",beta,"  axis=",axis)
                     DebugMsg(4,"     vec2F=",vec2.Length,vec2, " vec1R=",vec1.Length,vec1)
@@ -412,9 +427,8 @@ class Rigid():
                 rotation = rotation.multiply( self.refPointsBoundBoxSize ) # not sure is this physiccaly correct
                 self.spin = self.spin.add(rotation)
 
-                self.countSpinVectors += 1
                 DebugMsg(4,"A   ",self.label,dep.dependedRigid.label, "rotation=", rotation.Length, rotation)
-                spinLenSum = spinLenSum + 30 # r.Length
+                spinLenSum = spinLenSum + self.refPointsBoundBoxSize 
 
         if (self.spin !=None)and(spinLenSum!=0.0):
             self.spin = self.spin.multiply( 1.0/spinLenSum )
@@ -440,8 +454,8 @@ class Rigid():
         #Rotate the rigid...
         center = None
         rotation = None
-        if (self.spin != None and self.spin.Length != 0.0 and self.countSpinVectors != 0):
-            spinAngle = self.spin.Length# / self.countSpinVectors
+        if (self.spin != None and self.spin.Length != 0.0 ):
+            spinAngle = self.spin.Length
             if spinAngle>15.0: spinAngle=15.0 # do not accept more degrees
             try:
                 spinStep = spinAngle*SPINSTEP_MUL
